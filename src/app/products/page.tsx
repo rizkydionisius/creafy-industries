@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from './page.module.css';
 import { Package } from 'lucide-react';
+import Reveal from "@/components/Reveal/Reveal";
 import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
 import { Query } from 'node-appwrite';
 import ProductCatalog from '@/app/ProductCatalog';
@@ -34,7 +35,9 @@ export default async function Products() {
 
       <section style={{ padding: '4rem 0', background: 'var(--secondary)', flex: 1 }}>
         <div className="container">
-          <ProductCatalog products={products} />
+          <Reveal once>
+            <ProductCatalog products={products} />
+          </Reveal>
         </div>
       </section>
     </>

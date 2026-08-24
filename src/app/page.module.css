@@ -341,6 +341,7 @@
   text-align: center;
   transition: transform 0.3s ease;
   border-bottom: 4px solid transparent;
+  height: 100%;
 }
 
 .featureCard:hover {

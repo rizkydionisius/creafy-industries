@@ -1,0 +1,363 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, UploadCloud, FileText, Edit2, GripVertical } from 'lucide-react';
+import { addPortfolio, deletePortfolio, editPortfolio, updatePortfolioSequence } from '@/app/actions/portfolio';
+
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+function SortableRow({ portfolio, onEdit, onDelete, deletingId }: any) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: portfolio.$id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    background: isDragging ? '#fdfdfd' : 'white',
+    position: isDragging ? 'relative' : 'static',
+    zIndex: isDragging ? 10 : 1,
+    boxShadow: isDragging ? '0 5px 15px rgba(0,0,0,0.1)' : 'none',
+  } as React.CSSProperties;
+
+  return (
+    <tr ref={setNodeRef} style={{ ...style, borderBottom: '1px solid #eaeaea' }}>
+      <td style={{ padding: '1rem', width: '50px', textAlign: 'center' }}>
+        <button 
+          {...attributes} 
+          {...listeners} 
+          style={{ background: 'transparent', border: 'none', cursor: 'grab', color: '#888', padding: '0.5rem' }}
+          title="Geser untuk mengatur urutan"
+        >
+          <GripVertical size={20} />
+        </button>
+      </td>
+      <td style={{ padding: '1rem', width: '120px' }}>
+        {portfolio.imageUrl ? (
+          <img src={portfolio.imageUrl} alt={portfolio.title} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #eee' }} />
+        ) : (
+          <div style={{ width: '100px', height: '100px', background: '#f5f5f5', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', border: '1px solid #eee' }}>
+            <FileText size={24} />
+          </div>
+        )}
+      </td>
+      <td style={{ padding: '1rem', fontWeight: 600, color: '#222' }}>
+        {portfolio.title}
+      </td>
+      <td style={{ padding: '1rem', color: '#666', fontSize: '0.95rem' }}>
+        <span style={{ background: '#f1f5f9', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 500 }}>
+          {portfolio.category}
+        </span>
+      </td>
+      <td style={{ padding: '1rem', width: '150px' }}>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            onClick={() => onEdit(portfolio)}
+            style={{ flex: 1, background: '#f5f5f5', border: '1px solid #ddd', color: '#555', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', padding: '0.5rem', borderRadius: '4px', fontWeight: 500, justifyContent: 'center' }}
+          >
+            <Edit2 size={14} /> Edit
+          </button>
+          <button 
+            onClick={() => onDelete(portfolio.$id, portfolio.imageUrl || '')}
+            disabled={deletingId === portfolio.$id}
+            style={{ flex: 1, background: '#fee2e2', border: 'none', color: '#D32F2F', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', padding: '0.5rem', borderRadius: '4px', fontWeight: 500, justifyContent: 'center' }}
+          >
+            <Trash2 size={14} /> {deletingId === portfolio.$id ? '...' : 'Hapus'}
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+export default function PortfolioClient({ initialPortfolios }: { initialPortfolios: any[] }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isSavingSequence, setIsSavingSequence] = useState(false);
+  
+  // UI State
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  
+  // Form State
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // DND State
+  const [portfolios, setPortfolios] = useState(initialPortfolios);
+
+  useEffect(() => {
+    setPortfolios(initialPortfolios);
+  }, [initialPortfolios]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = portfolios.findIndex((i) => i.$id === active.id);
+      const newIndex = portfolios.findIndex((i) => i.$id === over.id);
+      
+      const newItems = arrayMove(portfolios, oldIndex, newIndex);
+      
+      setPortfolios(newItems);
+      
+      const itemsToUpdate = newItems.map((item, index) => ({
+        id: item.$id,
+        sequence: index
+      }));
+
+      saveSequence(itemsToUpdate);
+    }
+  };
+
+  const saveSequence = async (items: {id: string, sequence: number}[]) => {
+    setIsSavingSequence(true);
+    await updatePortfolioSequence(items);
+    setIsSavingSequence(false);
+  };
+
+  const openAddForm = () => {
+    setEditingItem(null);
+    setTitle('');
+    setCategory('');
+    setPreviewUrl(null);
+    setIsFormOpen(true);
+    setError('');
+  };
+
+  const openEditForm = (item: any) => {
+    setEditingItem(item);
+    setTitle(item.title);
+    setCategory(item.category || '');
+    setPreviewUrl(item.imageUrl || null);
+    setIsFormOpen(true);
+    setError('');
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      if (editingItem && editingItem.imageUrl) {
+        setPreviewUrl(editingItem.imageUrl); 
+      } else {
+        setPreviewUrl(null);
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    const formData = new FormData(e.currentTarget);
+
+    let res;
+    if (editingItem) {
+      res = await editPortfolio(editingItem.$id, formData, editingItem.imageUrl);
+    } else {
+      res = await addPortfolio(formData);
+    }
+    
+    if (res?.error) {
+      setError(res.error);
+    } else {
+      setIsFormOpen(false);
+    }
+    
+    setLoading(false);
+  };
+
+  const handleDelete = async (id: string, url: string) => {
+    if (!confirm('Hapus karya ini dari portofolio?')) return;
+    setDeletingId(id);
+    await deletePortfolio(id, url);
+    setDeletingId(null);
+  };
+
+  // Helper to suggest existing categories
+  const existingCategories = Array.from(new Set(portfolios.map(p => p.category).filter(Boolean)));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      
+      {!isFormOpen ? (
+        <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#111', margin: '0 0 0.5rem 0' }}>
+                Daftar Portofolio ({portfolios.length})
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>
+                {isSavingSequence ? 'Menyimpan urutan...' : 'Geser ikon (↕) untuk mengubah urutan tampilan.'}
+              </p>
+            </div>
+            <button 
+              onClick={openAddForm}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#D32F2F', color: 'white', border: 'none', padding: '0.65rem 1rem', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer' }}
+            >
+              <Plus size={16} /> Tambah Portofolio
+            </button>
+          </div>
+          
+          {portfolios.length === 0 ? (
+            <div style={{ padding: '4rem', textAlign: 'center', color: '#888', border: '1px dashed #ddd', borderRadius: '8px' }}>
+              Belum ada portofolio.
+            </div>
+          ) : (
+            <div style={{ border: '1px solid #eaeaea', borderRadius: '8px', overflow: 'hidden' }}>
+              <DndContext 
+                id="dnd-portfolio-context"
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead style={{ background: '#f9f9f9', borderBottom: '1px solid #eaeaea' }}>
+                    <tr>
+                      <th style={{ padding: '1rem', width: '50px', textAlign: 'center' }}></th>
+                      <th style={{ padding: '1rem', width: '120px' }}>Foto</th>
+                      <th style={{ padding: '1rem', color: '#444', fontWeight: 600 }}>Judul Portofolio</th>
+                      <th style={{ padding: '1rem', color: '#444', fontWeight: 600 }}>Kategori</th>
+                      <th style={{ padding: '1rem', color: '#444', fontWeight: 600, textAlign: 'center' }}>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <SortableContext 
+                      items={portfolios.map(p => p.$id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {portfolios.map(item => (
+                        <SortableRow 
+                          key={item.$id} 
+                          portfolio={item} 
+                          onEdit={openEditForm} 
+                          onDelete={handleDelete}
+                          deletingId={deletingId}
+                        />
+                      ))}
+                    </SortableContext>
+                  </tbody>
+                </table>
+              </DndContext>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', border: '1px solid #eaeaea', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#111', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+              {editingItem ? <Edit2 size={18} color="#D32F2F" /> : <Plus size={18} color="#D32F2F" />} 
+              {editingItem ? 'Edit Portofolio' : 'Tambah Portofolio Baru'}
+            </h3>
+            <button 
+              onClick={() => setIsFormOpen(false)}
+              style={{ background: 'transparent', border: '1px solid #ccc', color: '#555', padding: '0.5rem 1rem', borderRadius: '6px', fontSize: '0.9rem', cursor: 'pointer' }}
+            >
+              Batal
+            </button>
+          </div>
+
+          {error && <div style={{ background: '#fef2f2', color: '#b91c1c', padding: '0.75rem', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</div>}
+
+          <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+            
+            <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.5rem', color: '#444' }}>Judul Karya</label>
+                <input 
+                  type="text" 
+                  name="title" 
+                  required 
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Contoh: Korsa BEM 2024"
+                  style={{ width: '100%', padding: '0.65rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.95rem' }} 
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.5rem', color: '#444' }}>Kategori</label>
+                <input 
+                  type="text" 
+                  name="category" 
+                  required 
+                  value={category}
+                  onChange={e => setCategory(e.target.value)}
+                  placeholder="Contoh: Kemeja"
+                  list="category-suggestions"
+                  style={{ width: '100%', padding: '0.65rem', border: '1px solid #ddd', borderRadius: '6px', fontSize: '0.95rem' }} 
+                />
+                <datalist id="category-suggestions">
+                  {existingCategories.map((cat, idx) => (
+                    <option key={idx} value={cat} />
+                  ))}
+                </datalist>
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#666' }}>Anda dapat mengetik kategori baru atau memilih dari yang sudah ada.</p>
+              </div>
+            </div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.5rem', color: '#444' }}>Foto Karya</label>
+              <div style={{ border: '1px dashed #ccc', padding: '2rem', borderRadius: '6px', textAlign: 'center', background: '#fafafa', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <input type="file" name="image" accept="image/*" onChange={handleFileChange} required={!editingItem} style={{ opacity: 0, position: 'absolute', inset: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 10 }} />
+                {previewUrl ? (
+                   <img src={previewUrl} alt="Preview" style={{ maxHeight: '250px', maxWidth: '100%', objectFit: 'contain', position: 'relative', zIndex: 5 }} />
+                ) : (
+                  <>
+                    <UploadCloud size={32} color="#888" style={{ marginBottom: '1rem' }} />
+                    <p style={{ margin: 0, fontSize: '0.95rem', color: '#666' }}>Tarik & Lepas gambar ke sini atau klik untuk memilih</p>
+                    {editingItem?.imageUrl && <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: '#999' }}>*Akan mengganti gambar yang lama</p>}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div style={{ gridColumn: '1 / -1', textAlign: 'right' }}>
+              <button type="submit" disabled={loading} style={{ background: loading ? '#ccc' : '#D32F2F', color: 'white', border: 'none', padding: '0.85rem 2rem', borderRadius: '6px', fontSize: '0.95rem', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', transition: 'background 0.2s' }}>
+                {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}

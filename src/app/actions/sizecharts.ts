@@ -45,7 +45,7 @@ export async function addSizeChart(formData: FormData) {
       sequence: newSequence
     });
 
-    revalidatePath('/admin/size-chart');
+    revalidatePath('/workshop-creafy/size-chart');
     revalidatePath('/size-chart');
     return { success: true };
   } catch (error: any) {
@@ -71,7 +71,7 @@ export async function deleteSizeChart(id: string, fileUrl: string) {
 
     await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
 
-    revalidatePath('/admin/size-chart');
+    revalidatePath('/workshop-creafy/size-chart');
     revalidatePath('/size-chart');
     return { success: true };
   } catch (error: any) {
@@ -116,7 +116,7 @@ export async function editSizeChart(id: string, formData: FormData, oldFileUrl?:
       imageUrl: fileUrl,
     });
 
-    revalidatePath('/admin/size-chart');
+    revalidatePath('/workshop-creafy/size-chart');
     revalidatePath('/size-chart');
     return { success: true };
   } catch (error: any) {
@@ -137,7 +137,7 @@ export async function updateSizeChartSequence(items: { id: string; sequence: num
       )
     );
 
-    revalidatePath('/admin/size-chart');
+    revalidatePath('/workshop-creafy/size-chart');
     revalidatePath('/size-chart');
     return { success: true };
   } catch (error: any) {

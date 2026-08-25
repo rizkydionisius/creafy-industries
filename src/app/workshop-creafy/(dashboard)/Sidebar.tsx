@@ -9,12 +9,12 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
-    { name: 'Artikel', path: '/admin/articles', icon: FileText },
-    { name: 'Katalog', path: '/admin/products', icon: ShoppingBag },
-    { name: 'Portofolio', path: '/admin/portfolio', icon: Image },
-    { name: 'Panduan Ukuran', path: '/admin/size-chart', icon: Ruler },
-    { name: 'Logo Klien', path: '/admin/logos', icon: Building2 },
+    { name: 'Dashboard', path: '/workshop-creafy', icon: LayoutDashboard },
+    { name: 'Artikel', path: '/workshop-creafy/articles', icon: FileText },
+    { name: 'Katalog', path: '/workshop-creafy/products', icon: ShoppingBag },
+    { name: 'Portofolio', path: '/workshop-creafy/portfolio', icon: Image },
+    { name: 'Panduan Ukuran', path: '/workshop-creafy/size-chart', icon: Ruler },
+    { name: 'Logo Klien', path: '/workshop-creafy/logos', icon: Building2 },
   ];
 
   return (
@@ -26,7 +26,7 @@ export default function Sidebar() {
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', padding: '0 1rem', flex: 1 }}>
         {navItems.map((item) => {
-          const isActive = pathname === item.path || (item.path !== '/admin' && pathname.startsWith(item.path));
+          const isActive = pathname === item.path || (item.path !== '/workshop-creafy' && pathname.startsWith(item.path));
           return (
             <Link 
               key={item.path} 

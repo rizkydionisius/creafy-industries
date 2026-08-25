@@ -44,7 +44,7 @@ export async function addProduct(formData: FormData) {
       sequence: newSequence
     });
 
-    revalidatePath('/admin/products');
+    revalidatePath('/workshop-creafy/products');
     revalidatePath('/products');
     revalidatePath('/');
     return { success: true };
@@ -71,7 +71,7 @@ export async function deleteProduct(id: string, fileUrl: string) {
 
     await databases.deleteDocument(DATABASE_ID, 'products', id);
 
-    revalidatePath('/admin/products');
+    revalidatePath('/workshop-creafy/products');
     revalidatePath('/products');
     revalidatePath('/');
     return { success: true };
@@ -119,7 +119,7 @@ export async function editProduct(id: string, formData: FormData, oldFileUrl?: s
       imageUrl: fileUrl || null,
     });
 
-    revalidatePath('/admin/products');
+    revalidatePath('/workshop-creafy/products');
     revalidatePath('/products');
     revalidatePath('/');
     return { success: true };
@@ -141,7 +141,7 @@ export async function updateProductSequence(items: { id: string; sequence: numbe
       )
     );
 
-    revalidatePath('/admin/products');
+    revalidatePath('/workshop-creafy/products');
     revalidatePath('/products');
     revalidatePath('/');
     return { success: true };

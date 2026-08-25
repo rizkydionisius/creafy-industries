@@ -28,7 +28,7 @@ export async function addLogo(formData: FormData) {
       logoUrl: fileUrl,
     });
 
-    revalidatePath('/admin/logos');
+    revalidatePath('/workshop-creafy/logos');
     revalidatePath('/'); // update public homepage carousel
     
     return { success: true };
@@ -53,7 +53,7 @@ export async function deleteLogo(documentId: string, fileUrl: string) {
 
     await databases.deleteDocument(DATABASE_ID, 'logos', documentId);
     
-    revalidatePath('/admin/logos');
+    revalidatePath('/workshop-creafy/logos');
     revalidatePath('/');
     
     return { success: true };

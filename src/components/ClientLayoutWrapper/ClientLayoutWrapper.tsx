@@ -7,7 +7,7 @@ import FloatingWhatsApp from '../FloatingWhatsApp/FloatingWhatsApp';
 
 export default function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith('/admin');
+  const isAdmin = pathname?.startsWith('/workshop-creafy');
 
   if (isAdmin) {
     return <main>{children}</main>;

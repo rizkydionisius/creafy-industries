@@ -32,7 +32,7 @@ export async function addPortfolio(formData: FormData) {
       sequence: 0,
     });
 
-    revalidatePath('/admin/portfolio');
+    revalidatePath('/workshop-creafy/portfolio');
     revalidatePath('/portfolio');
     return { success: true, id: res.$id };
   } catch (error: any) {
@@ -78,7 +78,7 @@ export async function editPortfolio(id: string, formData: FormData, oldImageUrl:
       imageUrl,
     });
 
-    revalidatePath('/admin/portfolio');
+    revalidatePath('/workshop-creafy/portfolio');
     revalidatePath('/portfolio');
     return { success: true };
   } catch (error: any) {
@@ -106,7 +106,7 @@ export async function deletePortfolio(id: string, imageUrl: string) {
       }
     }
 
-    revalidatePath('/admin/portfolio');
+    revalidatePath('/workshop-creafy/portfolio');
     revalidatePath('/portfolio');
     return { success: true };
   } catch (error: any) {
@@ -127,7 +127,7 @@ export async function updatePortfolioSequence(items: {id: string, sequence: numb
       )
     );
 
-    revalidatePath('/admin/portfolio');
+    revalidatePath('/workshop-creafy/portfolio');
     revalidatePath('/portfolio');
     return { success: true };
   } catch (error: any) {

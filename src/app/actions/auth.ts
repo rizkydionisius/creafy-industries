@@ -36,12 +36,12 @@ export async function login(formData: FormData) {
   }
 
   if (success) {
-    redirect('/admin');
+    redirect('/workshop-creafy');
   }
 }
 
 export async function logout() {
   const cookieStore = await cookies();
   cookieStore.delete('creafy_cms_session');
-  redirect('/admin/login');
+  redirect('/workshop-creafy/login');
 }

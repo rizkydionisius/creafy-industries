@@ -2,10 +2,10 @@ import { FileText, ShoppingBag, Image, Building2, ArrowRight } from 'lucide-reac
 
 export default function AdminDashboard() {
   const cards = [
-    { title: 'Manajemen Artikel', desc: 'Kelola tulisan blog dan berita terbaru seputar industri.', link: '/admin/articles', icon: FileText, color: '#3b82f6', bg: '#eff6ff' },
-    { title: 'Manajemen Produk', desc: 'Tambah atau edit katalog produk konveksi.', link: '/admin/products', icon: ShoppingBag, color: '#8b5cf6', bg: '#f5f3ff' },
-    { title: 'Manajemen Portofolio', desc: 'Tampilkan hasil produksi dan jahitan terbaik.', link: '/admin/portfolio', icon: Image, color: '#ec4899', bg: '#fdf2f8' },
-    { title: 'Logo Klien', desc: 'Kelola gambar logo untuk carousel di halaman utama.', link: '/admin/logos', icon: Building2, color: '#f59e0b', bg: '#fffbeb' },
+    { title: 'Manajemen Artikel', desc: 'Kelola tulisan blog dan berita terbaru seputar industri.', link: '/workshop-creafy/articles', icon: FileText, color: '#3b82f6', bg: '#eff6ff' },
+    { title: 'Manajemen Produk', desc: 'Tambah atau edit katalog produk konveksi.', link: '/workshop-creafy/products', icon: ShoppingBag, color: '#8b5cf6', bg: '#f5f3ff' },
+    { title: 'Manajemen Portofolio', desc: 'Tampilkan hasil produksi dan jahitan terbaik.', link: '/workshop-creafy/portfolio', icon: Image, color: '#ec4899', bg: '#fdf2f8' },
+    { title: 'Logo Klien', desc: 'Kelola gambar logo untuk carousel di halaman utama.', link: '/workshop-creafy/logos', icon: Building2, color: '#f59e0b', bg: '#fffbeb' },
   ];
 
   return (

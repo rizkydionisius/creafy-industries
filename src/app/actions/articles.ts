@@ -53,7 +53,7 @@ export async function addArticle(formData: FormData) {
 
     await databases.createDocument(DATABASE_ID, 'articles', ID.unique(), data);
 
-    revalidatePath('/admin/articles');
+    revalidatePath('/workshop-creafy/articles');
     revalidatePath('/articles');
     revalidatePath('/');
     return { success: true };
@@ -80,7 +80,7 @@ export async function deleteArticle(id: string, fileUrl: string) {
 
     await databases.deleteDocument(DATABASE_ID, 'articles', id);
 
-    revalidatePath('/admin/articles');
+    revalidatePath('/workshop-creafy/articles');
     revalidatePath('/articles');
     revalidatePath('/');
     return { success: true };
@@ -158,7 +158,7 @@ export async function editArticle(id: string, formData: FormData, oldFileUrl?: s
 
     await databases.updateDocument(DATABASE_ID, 'articles', id, data);
 
-    revalidatePath('/admin/articles');
+    revalidatePath('/workshop-creafy/articles');
     revalidatePath('/articles');
     revalidatePath('/');
     return { success: true };

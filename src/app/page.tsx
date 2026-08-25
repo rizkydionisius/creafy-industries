@@ -13,7 +13,9 @@ export default async function Home() {
 
   try {
     const { databases } = await createAdminClient();
-    const resLogos = await databases.listDocuments(DATABASE_ID, 'logos');
+    const resLogos = await databases.listDocuments(DATABASE_ID, 'logos', [
+      Query.orderAsc('sequence')
+    ]);
     // Konversi ke plain object agar Next.js tidak error saat di-pass ke Client Component
     logos = JSON.parse(JSON.stringify(resLogos.documents));
 

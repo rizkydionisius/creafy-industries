@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './page.module.css';
 import { X } from 'lucide-react';
 
@@ -31,7 +32,7 @@ export default function ProductCatalog({ products }: { products: any[] }) {
       </div>
 
       {/* Modal */}
-      {selectedProduct && (
+      {selectedProduct && typeof document !== 'undefined' && createPortal(
         <div className={styles.modalBackdrop} onClick={() => setSelectedProduct(null)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <button className={styles.modalClose} onClick={() => setSelectedProduct(null)}>
@@ -57,7 +58,8 @@ export default function ProductCatalog({ products }: { products: any[] }) {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

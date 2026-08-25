@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './page.module.css';
 import { Eye, Share2, X } from 'lucide-react';
 
@@ -8,12 +9,21 @@ export default function SizeChartGridClient({ sizeCharts }: { sizeCharts: any[] 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const handleShare = async (title: string, url: string) => {
+    // Buat URL menjadi bersih menggunakan rewrite
+    let shareUrl = url;
+    if (typeof window !== 'undefined' && url.includes('sgp.cloud.appwrite.io')) {
+      const fileIdMatch = url.match(/\/files\/([^/]+)\/view/);
+      if (fileIdMatch && fileIdMatch[1]) {
+        shareUrl = `${window.location.origin}/storage/${fileIdMatch[1]}`;
+      }
+    }
+
     if (navigator.share) {
       try {
         await navigator.share({
           title: `Size Chart: ${title}`,
           text: `Lihat Size Chart ${title} dari Creafy Industries`,
-          url: url, // Maybe share the current page URL with a hash or just the image URL
+          url: shareUrl,
         });
       } catch (err) {
         console.error('Error sharing', err);
@@ -21,7 +31,7 @@ export default function SizeChartGridClient({ sizeCharts }: { sizeCharts: any[] 
     } else {
       // Fallback: Copy URL to clipboard
       try {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(shareUrl);
         alert('Tautan gambar telah disalin ke clipboard!');
       } catch (err) {
         console.error('Failed to copy', err);
@@ -69,7 +79,7 @@ export default function SizeChartGridClient({ sizeCharts }: { sizeCharts: any[] 
       </div>
 
       {/* Fullscreen Image Modal */}
-      {selectedImage && (
+      {selectedImage && typeof document !== 'undefined' && createPortal(
         <div className={styles.modalOverlay} onClick={() => setSelectedImage(null)}>
           <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
             <button className={styles.closeBtn} onClick={() => setSelectedImage(null)}>
@@ -77,7 +87,8 @@ export default function SizeChartGridClient({ sizeCharts }: { sizeCharts: any[] 
             </button>
             <img src={selectedImage} alt="Size Chart Fullscreen" className={styles.fullscreenImage} />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -3,7 +3,7 @@ import { Query } from 'node-appwrite';
 import LogosClient from './LogosClient';
 
 export default async function LogosPage() {
-  let logos = [];
+  let logos: any[] = [];
   try {
     const { databases } = await createAdminClient();
     const res = await databases.listDocuments(DATABASE_ID, 'logos', [

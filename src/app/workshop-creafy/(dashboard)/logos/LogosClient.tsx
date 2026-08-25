@@ -10,6 +10,8 @@ export default function LogosClient({ initialLogos }: { initialLogos: any[] }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  const [isDragging, setIsDragging] = useState(false);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -17,6 +19,7 @@ export default function LogosClient({ initialLogos }: { initialLogos: any[] }) {
     } else {
       setPreviewUrl(null);
     }
+    setIsDragging(false);
   };
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -25,16 +28,20 @@ export default function LogosClient({ initialLogos }: { initialLogos: any[] }) {
     setError('');
 
     const formData = new FormData(e.currentTarget);
-    const res = await addLogo(formData);
-    
-    if (res?.error) {
-      setError(res.error);
-    } else {
-      (e.target as HTMLFormElement).reset();
-      setPreviewUrl(null);
+    try {
+      const res = await addLogo(formData);
+      
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        (e.target as HTMLFormElement).reset();
+        setPreviewUrl(null);
+      }
+    } catch (err: any) {
+      setError('Gagal mengunggah. Pastikan ukuran file tidak melebihi 10MB atau cek koneksi internet Anda.');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   const handleDelete = async (id: string, url: string) => {
@@ -68,12 +75,15 @@ export default function LogosClient({ initialLogos }: { initialLogos: any[] }) {
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.5rem', color: '#444' }}>File Logo (Gambar)</label>
-            <div style={{ border: '1px dashed #ccc', padding: '1rem', borderRadius: '6px', textAlign: 'center', background: '#fafafa', position: 'relative', minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ border: `2px dashed ${isDragging ? '#D32F2F' : '#ccc'}`, padding: '1rem', borderRadius: '6px', textAlign: 'center', background: isDragging ? '#fef2f2' : '#fafafa', position: 'relative', minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}>
               <input 
                 type="file" 
                 name="image" 
                 accept="image/*" 
                 onChange={handleFileChange}
+                onDragEnter={() => setIsDragging(true)}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={() => setIsDragging(false)}
                 required 
                 style={{ opacity: 0, position: 'absolute', inset: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 10 }}
               />
@@ -81,8 +91,10 @@ export default function LogosClient({ initialLogos }: { initialLogos: any[] }) {
                  <img src={previewUrl} alt="Preview" style={{ maxHeight: '100px', maxWidth: '100%', objectFit: 'contain', position: 'relative', zIndex: 5 }} />
               ) : (
                 <>
-                  <UploadCloud size={24} color="#888" style={{ marginBottom: '0.5rem' }} />
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>Klik untuk memilih gambar</p>
+                  <UploadCloud size={24} color={isDragging ? '#D32F2F' : '#888'} style={{ marginBottom: '0.5rem', transition: 'color 0.2s ease' }} />
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: isDragging ? '#D32F2F' : '#666', fontWeight: isDragging ? 600 : 400 }}>
+                    {isDragging ? 'Lepaskan gambar di sini...' : 'Klik atau seret & lepas gambar di sini'}
+                  </p>
                 </>
               )}
             </div>

@@ -1,10 +1,11 @@
 import styles from "./page.module.css";
 import Link from "next/link";
 import { CheckCircle, Clock, ShieldCheck, Palette, Calendar, Eye, FileText, ArrowRight } from "lucide-react";
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
+import { prisma } from '@/lib/prisma';
 import ProductCatalog from "./ProductCatalog";
-import { Query } from "node-appwrite";
 import Reveal from "@/components/Reveal/Reveal";
+
+import { normalizeLogo, normalizeProduct, normalizeArticle } from '@/lib/normalize';
 
 export default async function Home() {
   let logos: any[] = [];
@@ -12,24 +13,20 @@ export default async function Home() {
   let articles: any[] = [];
 
   try {
-    const { databases } = await createAdminClient();
-    const resLogos = await databases.listDocuments(DATABASE_ID, 'logos', [
-      Query.orderAsc('sequence')
-    ]);
-    // Konversi ke plain object agar Next.js tidak error saat di-pass ke Client Component
-    logos = JSON.parse(JSON.stringify(resLogos.documents));
+    const rawLogos = await prisma.logo.findMany({ orderBy: { sequence: 'asc' } });
+    logos = rawLogos.map(normalizeLogo);
 
-    const resProducts = await databases.listDocuments(DATABASE_ID, 'products', [
-      Query.orderAsc('sequence'),
-      Query.limit(6)
-    ]);
-    products = JSON.parse(JSON.stringify(resProducts.documents));
+    const rawProducts = await prisma.product.findMany({
+      orderBy: { sequence: 'asc' },
+      take: 6,
+    });
+    products = rawProducts.map(normalizeProduct);
 
-    const resArticles = await databases.listDocuments(DATABASE_ID, 'articles', [
-      Query.orderDesc('$createdAt'),
-      Query.limit(4)
-    ]);
-    articles = JSON.parse(JSON.stringify(resArticles.documents));
+    const rawArticles = await prisma.article.findMany({
+      orderBy: { created_at: 'desc' },
+      take: 4,
+    });
+    articles = rawArticles.map(normalizeArticle);
   } catch (error) {
     console.error("Gagal mengambil data:", error);
   }
@@ -78,7 +75,7 @@ export default async function Home() {
               {/* Track 1 */}
               <div className={styles.carouselTrack}>
                 {logos.map(logo => (
-                  <div key={`logo-1-${logo.$id}`} className={styles.carouselLogo}>
+                  <div key={`logo-1-${logo.id}`} className={styles.carouselLogo}>
                     <img src={logo.logoUrl} alt={logo.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   </div>
                 ))}
@@ -86,7 +83,7 @@ export default async function Home() {
               {/* Track 2 (Duplicated for seamless loop) */}
               <div className={styles.carouselTrack}>
                 {logos.map(logo => (
-                  <div key={`logo-2-${logo.$id}`} className={styles.carouselLogo}>
+                  <div key={`logo-2-${logo.id}`} className={styles.carouselLogo}>
                     <img src={logo.logoUrl} alt={logo.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   </div>
                 ))}
@@ -94,7 +91,7 @@ export default async function Home() {
               {/* Track 3 (Extra duplicate in case logos are very few) */}
               <div className={styles.carouselTrack}>
                 {logos.map(logo => (
-                  <div key={`logo-3-${logo.$id}`} className={styles.carouselLogo}>
+                  <div key={`logo-3-${logo.id}`} className={styles.carouselLogo}>
                     <img src={logo.logoUrl} alt={logo.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   </div>
                 ))}
@@ -102,7 +99,7 @@ export default async function Home() {
               {/* Track 4 (Extra duplicate in case logos are very few) */}
               <div className={styles.carouselTrack}>
                 {logos.map(logo => (
-                  <div key={`logo-4-${logo.$id}`} className={styles.carouselLogo}>
+                  <div key={`logo-4-${logo.id}`} className={styles.carouselLogo}>
                     <img src={logo.logoUrl} alt={logo.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   </div>
                 ))}
@@ -223,11 +220,11 @@ export default async function Home() {
                   finalExcerpt = textContent.length > 100 ? textContent.substring(0, 100) + '...' : textContent;
                 }
 
-                const displayDate = article.publishDate || article.$createdAt;
+                const displayDate = article.publishDate || article.createdAt;
                 const formattedDate = new Date(displayDate).toISOString().split('T')[0];
 
                 return (
-                  <Reveal key={article.$id} delay={index * 150} once>
+                  <Reveal key={article.id} delay={index * 150} once>
                     <Link href={`/articles/${article.slug}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%' }} className="article-card-home">
                       <style dangerouslySetInnerHTML={{
                         __html: `

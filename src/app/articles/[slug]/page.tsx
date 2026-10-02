@@ -1,6 +1,6 @@
 import React from 'react';
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { normalizeArticle } from '@/lib/normalize';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { User, Calendar, Clock, Eye } from 'lucide-react';
@@ -10,17 +10,13 @@ import 'react-quill-new/dist/quill.snow.css'; // Memastikan style dasar quill te
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
   try {
-    const { databases } = await createAdminClient();
-    const res = await databases.listDocuments(DATABASE_ID, 'articles', [
-      Query.equal('slug', resolvedParams.slug),
-      Query.limit(1)
-    ]);
-    
-    if (res.documents.length > 0) {
-      const article = res.documents[0];
+    const raw = await prisma.article.findUnique({
+      where: { slug: resolvedParams.slug },
+    });
+    if (raw) {
+      const article = normalizeArticle(raw);
       const textContent = article.content ? article.content.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim() : '';
       const excerpt = article.excerpt || (textContent.length > 150 ? textContent.substring(0, 150) + '...' : textContent);
-      
       return {
         title: `${article.title} | Creafy Industries`,
         description: excerpt,
@@ -36,15 +32,9 @@ export default async function ArticleDetail({ params }: { params: Promise<{ slug
   const resolvedParams = await params;
 
   try {
-    const { databases } = await createAdminClient();
-    const res = await databases.listDocuments(DATABASE_ID, 'articles', [
-      Query.equal('slug', resolvedParams.slug),
-      Query.limit(1)
-    ]);
-    
-    if (res.documents.length > 0) {
-      article = JSON.parse(JSON.stringify(res.documents[0]));
-    }
+    article = normalizeArticle(await prisma.article.findUnique({
+      where: { slug: resolvedParams.slug },
+    }) as any);
   } catch (error) {
     console.error("Gagal mengambil detail artikel:", error);
   }
@@ -54,7 +44,7 @@ export default async function ArticleDetail({ params }: { params: Promise<{ slug
   }
 
   // Helper values
-  const displayDate = article.publishDate || article.$createdAt;
+  const displayDate = article.publishDate || article.createdAt;
   const formattedDate = new Date(displayDate).toISOString().split('T')[0];
   const readTime = Math.max(1, Math.ceil((article.content?.length || 0) / 1000));
   const viewsCount = Math.floor(Math.random() * 50) + 10;

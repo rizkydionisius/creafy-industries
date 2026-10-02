@@ -1,11 +1,8 @@
 'use server';
 
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { ID } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { saveFile, deleteFile } from '@/lib/upload';
 import { revalidatePath } from 'next/cache';
-
-const COLLECTION_ID = 'portfolio';
-const STORAGE_BUCKET_ID = 'images'; // Same as products/articles
 
 export async function addPortfolio(formData: FormData) {
   try {
@@ -17,24 +14,18 @@ export async function addPortfolio(formData: FormData) {
       return { error: 'Judul dan kategori wajib diisi.' };
     }
 
-    const { databases, storage } = await createAdminClient();
-    let imageUrl = '';
-
+    let image_url: string | null = null;
     if (imageFile && imageFile.size > 0) {
-      const uploadRes = await storage.createFile(STORAGE_BUCKET_ID, ID.unique(), imageFile);
-      imageUrl = `https://sgp.cloud.appwrite.io/v1/storage/buckets/${STORAGE_BUCKET_ID}/files/${uploadRes.$id}/view?project=6a8c438600024a08a21e`;
+      image_url = await saveFile(imageFile);
     }
 
-    const res = await databases.createDocument(DATABASE_ID, COLLECTION_ID, ID.unique(), {
-      title,
-      category,
-      imageUrl,
-      sequence: 0,
+    const res = await prisma.portfolio.create({
+      data: { title, category, image_url, sequence: 0 },
     });
 
     revalidatePath('/workshop-creafy/portfolio');
     revalidatePath('/portfolio');
-    return { success: true, id: res.$id };
+    return { success: true, id: res.id };
   } catch (error: any) {
     console.error("Gagal menambah portofolio:", error);
     return { error: error.message || 'Terjadi kesalahan saat menyimpan.' };
@@ -51,31 +42,16 @@ export async function editPortfolio(id: string, formData: FormData, oldImageUrl:
       return { error: 'Judul dan kategori wajib diisi.' };
     }
 
-    const { databases, storage } = await createAdminClient();
-    let imageUrl = oldImageUrl;
+    let image_url = oldImageUrl;
 
     if (imageFile && imageFile.size > 0) {
-      const uploadRes = await storage.createFile(STORAGE_BUCKET_ID, ID.unique(), imageFile);
-      imageUrl = `https://sgp.cloud.appwrite.io/v1/storage/buckets/${STORAGE_BUCKET_ID}/files/${uploadRes.$id}/view?project=6a8c438600024a08a21e`;
-
-      if (oldImageUrl) {
-        try {
-          const urlObj = new URL(oldImageUrl);
-          const parts = urlObj.pathname.split('/');
-          const fileId = parts[parts.indexOf('files') + 1];
-          if (fileId) {
-            await storage.deleteFile(STORAGE_BUCKET_ID, fileId);
-          }
-        } catch (e) {
-          console.error("Gagal menghapus foto lama:", e);
-        }
-      }
+      image_url = await saveFile(imageFile);
+      if (oldImageUrl) await deleteFile(oldImageUrl);
     }
 
-    await databases.updateDocument(DATABASE_ID, COLLECTION_ID, id, {
-      title,
-      category,
-      imageUrl,
+    await prisma.portfolio.update({
+      where: { id },
+      data: { title, category, image_url },
     });
 
     revalidatePath('/workshop-creafy/portfolio');
@@ -89,22 +65,8 @@ export async function editPortfolio(id: string, formData: FormData, oldImageUrl:
 
 export async function deletePortfolio(id: string, imageUrl: string) {
   try {
-    const { databases, storage } = await createAdminClient();
-    
-    await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
-    
-    if (imageUrl) {
-      try {
-        const urlObj = new URL(imageUrl);
-        const parts = urlObj.pathname.split('/');
-        const fileId = parts[parts.indexOf('files') + 1];
-        if (fileId) {
-          await storage.deleteFile(STORAGE_BUCKET_ID, fileId);
-        }
-      } catch (e) {
-        console.error("Gagal menghapus foto:", e);
-      }
-    }
+    await prisma.portfolio.delete({ where: { id } });
+    if (imageUrl) await deleteFile(imageUrl);
 
     revalidatePath('/workshop-creafy/portfolio');
     revalidatePath('/portfolio');
@@ -115,14 +77,13 @@ export async function deletePortfolio(id: string, imageUrl: string) {
   }
 }
 
-export async function updatePortfolioSequence(items: {id: string, sequence: number}[]) {
+export async function updatePortfolioSequence(items: { id: string; sequence: number }[]) {
   try {
-    const { databases } = await createAdminClient();
-    
     await Promise.all(
-      items.map(item => 
-        databases.updateDocument(DATABASE_ID, COLLECTION_ID, item.id, {
-          sequence: item.sequence
+      items.map(item =>
+        prisma.portfolio.update({
+          where: { id: item.id },
+          data: { sequence: item.sequence },
         })
       )
     );

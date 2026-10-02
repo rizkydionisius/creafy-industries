@@ -1,17 +1,14 @@
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { normalizeProduct } from '@/lib/normalize';
 import ProductsClient from './ProductsClient';
 
 export default async function ProductsPage() {
-  let products = [];
+  let products: any[] = [];
   try {
-    const { databases } = await createAdminClient();
-    const res = await databases.listDocuments(DATABASE_ID, 'products', [
-      Query.orderAsc('sequence'),
-      Query.orderDesc('$createdAt')
-    ]);
-    // Konversi ke plain object untuk SSR Next.js
-    products = JSON.parse(JSON.stringify(res.documents));
+    const raw = await prisma.product.findMany({
+      orderBy: [{ sequence: 'asc' }, { created_at: 'desc' }],
+    });
+    products = raw.map(normalizeProduct);
   } catch (error) {
     console.error("Gagal memuat produk:", error);
   }

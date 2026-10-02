@@ -1,7 +1,7 @@
 'use server'
 
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { ID, Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { saveFile, deleteFile } from '@/lib/upload';
 import { revalidatePath } from 'next/cache';
 
 export async function addProduct(formData: FormData) {
@@ -14,34 +14,18 @@ export async function addProduct(formData: FormData) {
       return { error: 'Nama dan deskripsi wajib diisi' };
     }
 
-    const { databases, storage } = await createAdminClient();
-
-    let fileUrl = '';
+    let image_url: string | null = null;
     if (image && image.size > 0) {
-      const file = await storage.createFile('images', ID.unique(), image);
-      fileUrl = `https://sgp.cloud.appwrite.io/v1/storage/buckets/images/files/${file.$id}/view?project=6a8c438600024a08a21e`;
+      image_url = await saveFile(image);
     }
 
-    // Ambil produk terakhir untuk mendapatkan urutan terakhir
-    let newSequence = 0;
-    try {
-      const lastProduct = await databases.listDocuments(DATABASE_ID, 'products', [
-        Query.orderDesc('sequence'),
-        Query.limit(1)
-      ]);
-      if (lastProduct.documents.length > 0) {
-        newSequence = (lastProduct.documents[0].sequence || 0) + 1;
-      }
-    } catch (e) {
-      // Abaikan jika error (mungkin atribut sequence belum ada atau tipe data salah)
-      console.log("Could not fetch last sequence", e);
-    }
+    const lastProduct = await prisma.product.findFirst({
+      orderBy: { sequence: 'desc' },
+    });
+    const newSequence = lastProduct ? lastProduct.sequence + 1 : 0;
 
-    await databases.createDocument(DATABASE_ID, 'products', ID.unique(), {
-      name,
-      description,
-      imageUrl: fileUrl || null,
-      sequence: newSequence
+    await prisma.product.create({
+      data: { name, description, image_url, sequence: newSequence },
     });
 
     revalidatePath('/workshop-creafy/products');
@@ -56,20 +40,8 @@ export async function addProduct(formData: FormData) {
 
 export async function deleteProduct(id: string, fileUrl: string) {
   try {
-    const { databases, storage } = await createAdminClient();
-
-    if (fileUrl) {
-      const fileIdMatch = fileUrl.match(/files\/([^/]+)\/view/);
-      if (fileIdMatch && fileIdMatch[1]) {
-        try {
-          await storage.deleteFile('images', fileIdMatch[1]);
-        } catch (e) {
-          console.error("Gagal menghapus file lama:", e);
-        }
-      }
-    }
-
-    await databases.deleteDocument(DATABASE_ID, 'products', id);
+    await prisma.product.delete({ where: { id } });
+    if (fileUrl) await deleteFile(fileUrl);
 
     revalidatePath('/workshop-creafy/products');
     revalidatePath('/products');
@@ -91,32 +63,19 @@ export async function editProduct(id: string, formData: FormData, oldFileUrl?: s
       return { error: 'Nama dan deskripsi wajib diisi' };
     }
 
-    const { databases, storage } = await createAdminClient();
+    const current = await prisma.product.findUnique({ where: { id } });
+    if (!current) return { error: 'Produk tidak ditemukan' };
 
-    let fileUrl = oldFileUrl || '';
-    
-    // Jika ada gambar baru yang diunggah
+    let image_url = oldFileUrl || current.image_url || null;
+
     if (image && image.size > 0) {
-      const file = await storage.createFile('images', ID.unique(), image);
-      fileUrl = `https://sgp.cloud.appwrite.io/v1/storage/buckets/images/files/${file.$id}/view?project=6a8c438600024a08a21e`;
-      
-      // Hapus gambar lama jika ada
-      if (oldFileUrl) {
-        const fileIdMatch = oldFileUrl.match(/files\/([^/]+)\/view/);
-        if (fileIdMatch && fileIdMatch[1]) {
-          try {
-            await storage.deleteFile('images', fileIdMatch[1]);
-          } catch (e) {
-            console.error("Gagal menghapus file lama saat update:", e);
-          }
-        }
-      }
+      image_url = await saveFile(image);
+      if (oldFileUrl) await deleteFile(oldFileUrl);
     }
 
-    await databases.updateDocument(DATABASE_ID, 'products', id, {
-      name,
-      description,
-      imageUrl: fileUrl || null,
+    await prisma.product.update({
+      where: { id },
+      data: { name, description, image_url },
     });
 
     revalidatePath('/workshop-creafy/products');
@@ -131,12 +90,11 @@ export async function editProduct(id: string, formData: FormData, oldFileUrl?: s
 
 export async function updateProductSequence(items: { id: string; sequence: number }[]) {
   try {
-    const { databases } = await createAdminClient();
-
     await Promise.all(
-      items.map(item => 
-        databases.updateDocument(DATABASE_ID, 'products', item.id, {
-          sequence: item.sequence
+      items.map(item =>
+        prisma.product.update({
+          where: { id: item.id },
+          data: { sequence: item.sequence },
         })
       )
     );

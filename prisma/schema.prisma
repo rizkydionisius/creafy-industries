@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  name       String?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("users")
+}
+
+model Article {
+  id           String    @id @default(cuid())
+  permissions  Json?
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @updatedAt @db.Timestamptz(6)
+  title        String
+  slug         String    @unique
+  content      String
+  thumbnail    String?
+  publish_date DateTime? @db.Timestamptz(6)
+  category     String?
+  author       String?
+  excerpt      String?
+
+  @@map("articles")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  permissions Json?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+  name        String
+  description String?
+  image_url   String?
+  sequence    Int      @default(0)
+
+  @@map("products")
+}
+
+model Logo {
+  id          String   @id @default(cuid())
+  permissions Json?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+  name        String
+  logo_url    String?
+  sequence    Int      @default(0)
+
+  @@map("logos")
+}
+
+model Portfolio {
+  id          String   @id @default(cuid())
+  permissions Json?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+  title       String
+  image_url   String?
+  category    String?
+  sequence    Int      @default(0)
+
+  @@map("portfolio")
+}
+
+model SizeChart {
+  id          String   @id @default(cuid())
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+  title       String
+  image_url   String
+  sequence    Int      @default(0)
+
+  @@map("size_charts")
+}

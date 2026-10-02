@@ -1,7 +1,7 @@
 'use server'
 
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { ID, Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { saveFile, deleteFile } from '@/lib/upload';
 import { revalidatePath } from 'next/cache';
 
 export async function addArticle(formData: FormData) {
@@ -10,8 +10,7 @@ export async function addArticle(formData: FormData) {
     const slug = formData.get('slug') as string;
     const content = formData.get('content') as string;
     const image = formData.get('image') as File;
-    
-    // New fields
+
     const publishDate = formData.get('publishDate') as string;
     const category = formData.get('category') as string;
     const author = formData.get('author') as string;
@@ -21,37 +20,29 @@ export async function addArticle(formData: FormData) {
       return { error: 'Judul, slug, dan konten wajib diisi' };
     }
 
-    const { databases, storage } = await createAdminClient();
-
     // Cek apakah slug sudah ada
-    const existing = await databases.listDocuments(DATABASE_ID, 'articles', [
-      Query.equal('slug', slug)
-    ]);
-    if (existing.total > 0) {
+    const existing = await prisma.article.findUnique({ where: { slug } });
+    if (existing) {
       return { error: 'Slug sudah digunakan, silakan ganti judul atau ubah slug' };
     }
 
-    let fileUrl = '';
+    let thumbnail: string | null = null;
     if (image && image.size > 0) {
-      const file = await storage.createFile('images', ID.unique(), image);
-      fileUrl = `https://sgp.cloud.appwrite.io/v1/storage/buckets/images/files/${file.$id}/view?project=6a8c438600024a08a21e`;
+      thumbnail = await saveFile(image);
     }
 
-    // Prepare document data
-    const data: any = {
-      title,
-      slug,
-      content,
-      thumbnail: fileUrl || null,
-    };
-    
-    // Only add if provided to avoid Appwrite errors on empty strings for datetime
-    if (publishDate) data.publishDate = new Date(publishDate).toISOString();
-    if (category) data.category = category;
-    if (author) data.author = author;
-    if (excerpt) data.excerpt = excerpt;
-
-    await databases.createDocument(DATABASE_ID, 'articles', ID.unique(), data);
+    await prisma.article.create({
+      data: {
+        title,
+        slug,
+        content,
+        thumbnail,
+        category: category || null,
+        author: author || null,
+        excerpt: excerpt || null,
+        publish_date: publishDate ? new Date(publishDate) : null,
+      },
+    });
 
     revalidatePath('/workshop-creafy/articles');
     revalidatePath('/articles');
@@ -65,20 +56,8 @@ export async function addArticle(formData: FormData) {
 
 export async function deleteArticle(id: string, fileUrl: string) {
   try {
-    const { databases, storage } = await createAdminClient();
-
-    if (fileUrl) {
-      const fileIdMatch = fileUrl.match(/files\/([^/]+)\/view/);
-      if (fileIdMatch && fileIdMatch[1]) {
-        try {
-          await storage.deleteFile('images', fileIdMatch[1]);
-        } catch (e) {
-          console.error("Gagal menghapus file lama:", e);
-        }
-      }
-    }
-
-    await databases.deleteDocument(DATABASE_ID, 'articles', id);
+    await prisma.article.delete({ where: { id } });
+    if (fileUrl) await deleteFile(fileUrl);
 
     revalidatePath('/workshop-creafy/articles');
     revalidatePath('/articles');
@@ -96,8 +75,7 @@ export async function editArticle(id: string, formData: FormData, oldFileUrl?: s
     const slug = formData.get('slug') as string;
     const content = formData.get('content') as string;
     const image = formData.get('image') as File;
-    
-    // New fields
+
     const publishDate = formData.get('publishDate') as string;
     const category = formData.get('category') as string;
     const author = formData.get('author') as string;
@@ -107,56 +85,36 @@ export async function editArticle(id: string, formData: FormData, oldFileUrl?: s
       return { error: 'Judul, slug, dan konten wajib diisi' };
     }
 
-    const { databases, storage } = await createAdminClient();
+    const current = await prisma.article.findUnique({ where: { id } });
+    if (!current) return { error: 'Artikel tidak ditemukan' };
 
-    // Cek slug jika diubah
-    const current = await databases.getDocument(DATABASE_ID, 'articles', id);
     if (current.slug !== slug) {
-      const existing = await databases.listDocuments(DATABASE_ID, 'articles', [
-        Query.equal('slug', slug)
-      ]);
-      if (existing.total > 0) {
+      const existing = await prisma.article.findUnique({ where: { slug } });
+      if (existing) {
         return { error: 'Slug sudah digunakan artikel lain' };
       }
     }
 
-    let fileUrl = oldFileUrl || '';
-    
+    let thumbnail = oldFileUrl || current.thumbnail || null;
+
     if (image && image.size > 0) {
-      const file = await storage.createFile('images', ID.unique(), image);
-      fileUrl = `https://sgp.cloud.appwrite.io/v1/storage/buckets/images/files/${file.$id}/view?project=6a8c438600024a08a21e`;
-      
-      if (oldFileUrl) {
-        const fileIdMatch = oldFileUrl.match(/files\/([^/]+)\/view/);
-        if (fileIdMatch && fileIdMatch[1]) {
-          try {
-            await storage.deleteFile('images', fileIdMatch[1]);
-          } catch (e) {
-            console.error("Gagal menghapus file lama saat update:", e);
-          }
-        }
-      }
+      thumbnail = await saveFile(image);
+      if (oldFileUrl) await deleteFile(oldFileUrl);
     }
 
-    // Prepare document data
-    const data: any = {
-      title,
-      slug,
-      content,
-      thumbnail: fileUrl || null,
-      category: category || null,
-      author: author || null,
-      excerpt: excerpt || null,
-    };
-    
-    // Only update publishDate if valid
-    if (publishDate) {
-      data.publishDate = new Date(publishDate).toISOString();
-    } else {
-      data.publishDate = null;
-    }
-
-    await databases.updateDocument(DATABASE_ID, 'articles', id, data);
+    await prisma.article.update({
+      where: { id },
+      data: {
+        title,
+        slug,
+        content,
+        thumbnail,
+        category: category || null,
+        author: author || null,
+        excerpt: excerpt || null,
+        publish_date: publishDate ? new Date(publishDate) : null,
+      },
+    });
 
     revalidatePath('/workshop-creafy/articles');
     revalidatePath('/articles');

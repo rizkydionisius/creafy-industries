@@ -1,21 +1,18 @@
 import React from 'react';
 import styles from './page.module.css';
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { normalizePortfolio } from '@/lib/normalize';
 import { Briefcase } from 'lucide-react';
 import PortfolioFilterClient from './PortfolioFilterClient';
 
 export default async function PortfolioPage() {
-  let portfolios = [];
+  let portfolios: any[] = [];
 
   try {
-    const { databases } = await createAdminClient();
-    const res = await databases.listDocuments(DATABASE_ID, 'portfolio', [
-      Query.orderAsc('sequence'),
-      Query.orderDesc('$createdAt')
-    ]);
-    
-    portfolios = JSON.parse(JSON.stringify(res.documents));
+    const raw = await prisma.portfolio.findMany({
+      orderBy: [{ sequence: 'asc' }, { created_at: 'desc' }],
+    });
+    portfolios = raw.map(normalizePortfolio);
   } catch (error) {
     console.error("Gagal memuat portofolio:", error);
   }

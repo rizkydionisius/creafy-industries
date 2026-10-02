@@ -1,23 +1,19 @@
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { normalizeLogo } from '@/lib/normalize';
 import LogosClient from './LogosClient';
 
 export default async function LogosPage() {
   let logos: any[] = [];
   try {
-    const { databases } = await createAdminClient();
-    const res = await databases.listDocuments(DATABASE_ID, 'logos', [
-      Query.orderAsc('sequence'),
-      Query.orderDesc('$createdAt')
-    ]);
-    
-    // Clean up object for passing to client component
-    logos = res.documents.map((doc: any) => ({
-      $id: doc.$id,
+    const rawLogos = await prisma.logo.findMany({
+      orderBy: [{ sequence: 'asc' }, { created_at: 'desc' }],
+    });
+    logos = rawLogos.map((doc) => ({
+      $id: doc.id,
       name: doc.name,
-      logoUrl: doc.logoUrl,
-      sequence: doc.sequence || 0,
-      $createdAt: doc.$createdAt,
+      logoUrl: doc.logo_url,
+      sequence: doc.sequence,
+      $createdAt: doc.created_at.toISOString(),
     }));
   } catch (error) {
     console.error("Gagal memuat logo:", error);

@@ -1,11 +1,8 @@
 'use server'
 
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { ID, Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { saveFile, deleteFile } from '@/lib/upload';
 import { revalidatePath } from 'next/cache';
-
-const COLLECTION_ID = 'size_charts';
-const STORAGE_BUCKET_ID = 'images'; // User uses 'images' bucket
 
 export async function addSizeChart(formData: FormData) {
   try {
@@ -15,34 +12,19 @@ export async function addSizeChart(formData: FormData) {
     if (!title) {
       return { error: 'Judul wajib diisi' };
     }
-
     if (!image || image.size === 0) {
       return { error: 'Gambar panduan ukuran wajib diunggah' };
     }
 
-    const { databases, storage } = await createAdminClient();
+    const image_url = await saveFile(image);
 
-    const uploadRes = await storage.createFile(STORAGE_BUCKET_ID, ID.unique(), image);
-    const imageUrl = `https://sgp.cloud.appwrite.io/v1/storage/buckets/${STORAGE_BUCKET_ID}/files/${uploadRes.$id}/view?project=6a8c438600024a08a21e`;
+    const lastItem = await prisma.sizeChart.findFirst({
+      orderBy: { sequence: 'desc' },
+    });
+    const newSequence = lastItem ? lastItem.sequence + 1 : 0;
 
-    // Ambil item terakhir untuk mendapatkan urutan terakhir
-    let newSequence = 0;
-    try {
-      const lastItem = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
-        Query.orderDesc('sequence'),
-        Query.limit(1)
-      ]);
-      if (lastItem.documents.length > 0) {
-        newSequence = (lastItem.documents[0].sequence || 0) + 1;
-      }
-    } catch (e) {
-      console.log("Could not fetch last sequence", e);
-    }
-
-    await databases.createDocument(DATABASE_ID, COLLECTION_ID, ID.unique(), {
-      title,
-      imageUrl,
-      sequence: newSequence
+    await prisma.sizeChart.create({
+      data: { title, image_url, sequence: newSequence },
     });
 
     revalidatePath('/workshop-creafy/size-chart');
@@ -56,20 +38,8 @@ export async function addSizeChart(formData: FormData) {
 
 export async function deleteSizeChart(id: string, fileUrl: string) {
   try {
-    const { databases, storage } = await createAdminClient();
-
-    if (fileUrl) {
-      const fileIdMatch = fileUrl.match(/files\/([^/]+)\/view/);
-      if (fileIdMatch && fileIdMatch[1]) {
-        try {
-          await storage.deleteFile(STORAGE_BUCKET_ID, fileIdMatch[1]);
-        } catch (e) {
-          console.error("Gagal menghapus file lama:", e);
-        }
-      }
-    }
-
-    await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
+    await prisma.sizeChart.delete({ where: { id } });
+    if (fileUrl) await deleteFile(fileUrl);
 
     revalidatePath('/workshop-creafy/size-chart');
     revalidatePath('/size-chart');
@@ -89,31 +59,19 @@ export async function editSizeChart(id: string, formData: FormData, oldFileUrl?:
       return { error: 'Judul wajib diisi' };
     }
 
-    const { databases, storage } = await createAdminClient();
+    const current = await prisma.sizeChart.findUnique({ where: { id } });
+    if (!current) return { error: 'Data tidak ditemukan' };
 
-    let fileUrl = oldFileUrl || '';
-    
-    // Jika ada gambar baru yang diunggah
+    let image_url = oldFileUrl || current.image_url;
+
     if (image && image.size > 0) {
-      const uploadRes = await storage.createFile(STORAGE_BUCKET_ID, ID.unique(), image);
-      fileUrl = `https://sgp.cloud.appwrite.io/v1/storage/buckets/${STORAGE_BUCKET_ID}/files/${uploadRes.$id}/view?project=6a8c438600024a08a21e`;
-      
-      // Hapus gambar lama jika ada
-      if (oldFileUrl) {
-        const fileIdMatch = oldFileUrl.match(/files\/([^/]+)\/view/);
-        if (fileIdMatch && fileIdMatch[1]) {
-          try {
-            await storage.deleteFile(STORAGE_BUCKET_ID, fileIdMatch[1]);
-          } catch (e) {
-            console.error("Gagal menghapus file lama saat update:", e);
-          }
-        }
-      }
+      image_url = await saveFile(image);
+      if (oldFileUrl) await deleteFile(oldFileUrl);
     }
 
-    await databases.updateDocument(DATABASE_ID, COLLECTION_ID, id, {
-      title,
-      imageUrl: fileUrl,
+    await prisma.sizeChart.update({
+      where: { id },
+      data: { title, image_url },
     });
 
     revalidatePath('/workshop-creafy/size-chart');
@@ -127,12 +85,11 @@ export async function editSizeChart(id: string, formData: FormData, oldFileUrl?:
 
 export async function updateSizeChartSequence(items: { id: string; sequence: number }[]) {
   try {
-    const { databases } = await createAdminClient();
-
     await Promise.all(
-      items.map(item => 
-        databases.updateDocument(DATABASE_ID, COLLECTION_ID, item.id, {
-          sequence: item.sequence
+      items.map(item =>
+        prisma.sizeChart.update({
+          where: { id: item.id },
+          data: { sequence: item.sequence },
         })
       )
     );

@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { normalizeArticle } from '@/lib/normalize';
 import { Calendar, Eye, FileText, ArrowRight } from 'lucide-react';
 
 export const metadata = {
@@ -10,14 +10,13 @@ export const metadata = {
 };
 
 export default async function ArticlesPage() {
-  let articles = [];
+  let articles: any[] = [];
 
   try {
-    const { databases } = await createAdminClient();
-    const res = await databases.listDocuments(DATABASE_ID, 'articles', [
-      Query.orderDesc('$createdAt')
-    ]);
-    articles = JSON.parse(JSON.stringify(res.documents));
+    const raw = await prisma.article.findMany({
+      orderBy: { created_at: 'desc' },
+    });
+    articles = raw.map(normalizeArticle);
   } catch (error) {
     console.error("Gagal mengambil data artikel:", error);
   }
@@ -56,11 +55,11 @@ export default async function ArticlesPage() {
                   finalExcerpt = textContent.length > 100 ? textContent.substring(0, 100) + '...' : textContent;
                 }
 
-                const displayDate = article.publishDate || article.$createdAt;
+                const displayDate = article.publishDate || article.createdAt;
                 const formattedDate = new Date(displayDate).toISOString().split('T')[0];
 
                 return (
-                  <Link key={article.$id} href={`/articles/${article.slug}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', transition: 'transform 0.2s, box-shadow 0.2s' }} className="article-card">
+                  <Link key={article.id} href={`/articles/${article.slug}`} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', transition: 'transform 0.2s, box-shadow 0.2s' }} className="article-card">
                     <style dangerouslySetInnerHTML={{__html: `
                       .article-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.06); border-color: var(--primary); }
                       .article-card:hover h2 { color: var(--primary) !important; }

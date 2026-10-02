@@ -1,17 +1,16 @@
 import React from 'react';
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { normalizeArticle } from '@/lib/normalize';
 import ArticlesClient from './ArticlesClient';
 
 export default async function ArticlesPage() {
-  let articles = [];
+  let articles: any[] = [];
 
   try {
-    const { databases } = await createAdminClient();
-    const res = await databases.listDocuments(DATABASE_ID, 'articles', [
-      Query.orderDesc('$createdAt')
-    ]);
-    articles = JSON.parse(JSON.stringify(res.documents));
+    const raw = await prisma.article.findMany({
+      orderBy: { created_at: 'desc' },
+    });
+    articles = raw.map(normalizeArticle);
   } catch (error) {
     console.error("Gagal mengambil data artikel:", error);
   }

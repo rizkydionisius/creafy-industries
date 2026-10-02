@@ -57,8 +57,8 @@ export default function ArticlesClient({ initialArticles }: { initialArticles: a
     
     if (article.publishDate) {
       setPublishDate(new Date(article.publishDate).toISOString().split('T')[0]);
-    } else if (article.$createdAt) {
-      setPublishDate(new Date(article.$createdAt).toISOString().split('T')[0]);
+    } else if (article.createdAt) {
+      setPublishDate(new Date(article.createdAt).toISOString().split('T')[0]);
     } else {
       setPublishDate('');
     }
@@ -109,7 +109,7 @@ export default function ArticlesClient({ initialArticles }: { initialArticles: a
     try {
       let res;
       if (editingArticle) {
-        res = await editArticle(editingArticle.$id, formData, editingArticle.thumbnail);
+        res = await editArticle(editingArticle.id, formData, editingArticle.thumbnail);
       } else {
         res = await addArticle(formData);
       }
@@ -186,11 +186,11 @@ export default function ArticlesClient({ initialArticles }: { initialArticles: a
                   </tr>
                 ) : (
                   initialArticles.map((article) => {
-                    const displayDate = article.publishDate ? article.publishDate : article.$createdAt;
+                    const displayDate = article.publishDate ? article.publishDate : article.createdAt;
                     const dateFormatted = new Date(displayDate).toISOString().split('T')[0];
                     
                     return (
-                      <tr key={article.$id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <tr key={article.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                         <td style={{ padding: '1.25rem 1.5rem' }}>
                           <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                             <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: '#f1f5f9', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -237,8 +237,8 @@ export default function ArticlesClient({ initialArticles }: { initialArticles: a
                               <Edit2 size={16} />
                             </button>
                             <button 
-                              onClick={() => handleDelete(article.$id, article.thumbnail || '')}
-                              disabled={deletingId === article.$id}
+                              onClick={() => handleDelete(article.id, article.thumbnail || '')}
+                              disabled={deletingId === article.id}
                               title="Hapus"
                               style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0 }}
                             >

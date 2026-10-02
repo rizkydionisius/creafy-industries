@@ -1,7 +1,7 @@
 "use server";
 
-import { ID, Query } from 'node-appwrite';
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
+import { prisma } from '@/lib/prisma';
+import { saveFile, deleteFile } from '@/lib/upload';
 import { revalidatePath } from 'next/cache';
 
 export async function addLogo(formData: FormData) {
@@ -13,33 +13,19 @@ export async function addLogo(formData: FormData) {
   }
 
   try {
-    const { databases, storage } = await createAdminClient();
+    const logo_url = await saveFile(image);
 
-    const file = await storage.createFile('images', ID.unique(), image);
-    const fileUrl = `https://sgp.cloud.appwrite.io/v1/storage/buckets/images/files/${file.$id}/view?project=6a8c438600024a08a21e`;
+    const lastLogo = await prisma.logo.findFirst({
+      orderBy: { sequence: 'desc' },
+    });
+    const newSequence = lastLogo ? lastLogo.sequence + 1 : 0;
 
-    let newSequence = 0;
-    try {
-      const lastDoc = await databases.listDocuments(DATABASE_ID, 'logos', [
-        Query.orderDesc('sequence'),
-        Query.limit(1)
-      ]);
-      if (lastDoc.documents.length > 0) {
-        newSequence = (lastDoc.documents[0].sequence || 0) + 1;
-      }
-    } catch (e) {
-      console.log("Could not fetch last sequence", e);
-    }
-
-    await databases.createDocument(DATABASE_ID, 'logos', ID.unique(), {
-      name,
-      logoUrl: fileUrl,
-      sequence: newSequence
+    await prisma.logo.create({
+      data: { name, logo_url, sequence: newSequence },
     });
 
     revalidatePath('/workshop-creafy/logos');
     revalidatePath('/');
-    
     return { success: true };
   } catch (error: any) {
     return { error: error.message || 'Gagal menambahkan logo' };
@@ -48,22 +34,11 @@ export async function addLogo(formData: FormData) {
 
 export async function deleteLogo(documentId: string, fileUrl: string) {
   try {
-    const { databases, storage } = await createAdminClient();
-    
-    const fileIdMatch = fileUrl.match(/\/files\/([^/]+)\/view/);
-    if (fileIdMatch && fileIdMatch[1]) {
-      try {
-        await storage.deleteFile('images', fileIdMatch[1]);
-      } catch (e) {
-        console.error('Failed to delete file from storage:', e);
-      }
-    }
+    await prisma.logo.delete({ where: { id: documentId } });
+    if (fileUrl) await deleteFile(fileUrl);
 
-    await databases.deleteDocument(DATABASE_ID, 'logos', documentId);
-    
     revalidatePath('/workshop-creafy/logos');
     revalidatePath('/');
-    
     return { success: true };
   } catch (error: any) {
     return { error: error.message || 'Gagal menghapus logo' };
@@ -72,12 +47,11 @@ export async function deleteLogo(documentId: string, fileUrl: string) {
 
 export async function updateLogoSequence(items: { id: string; sequence: number }[]) {
   try {
-    const { databases } = await createAdminClient();
-
     await Promise.all(
-      items.map(item => 
-        databases.updateDocument(DATABASE_ID, 'logos', item.id, {
-          sequence: item.sequence
+      items.map(item =>
+        prisma.logo.update({
+          where: { id: item.id },
+          data: { sequence: item.sequence },
         })
       )
     );

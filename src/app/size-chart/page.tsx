@@ -1,21 +1,18 @@
 import React from 'react';
 import styles from './page.module.css';
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { normalizeSizeChart } from '@/lib/normalize';
 import { Ruler } from 'lucide-react';
 import SizeChartGridClient from './SizeChartGridClient';
 
 export default async function SizeChartPage() {
-  let sizeCharts = [];
+  let sizeCharts: any[] = [];
 
   try {
-    const { databases } = await createAdminClient();
-    const res = await databases.listDocuments(DATABASE_ID, 'size_charts', [
-      Query.orderAsc('sequence'),
-      Query.orderDesc('$createdAt')
-    ]);
-
-    sizeCharts = JSON.parse(JSON.stringify(res.documents));
+    const raw = await prisma.sizeChart.findMany({
+      orderBy: [{ sequence: 'asc' }, { created_at: 'desc' }],
+    });
+    sizeCharts = raw.map(normalizeSizeChart);
   } catch (error) {
     console.error("Gagal memuat panduan ukuran:", error);
   }

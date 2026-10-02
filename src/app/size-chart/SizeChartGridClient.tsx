@@ -9,14 +9,9 @@ export default function SizeChartGridClient({ sizeCharts }: { sizeCharts: any[] 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const handleShare = async (title: string, url: string) => {
-    // Buat URL menjadi bersih menggunakan rewrite
-    let shareUrl = url;
-    if (typeof window !== 'undefined' && url.includes('sgp.cloud.appwrite.io')) {
-      const fileIdMatch = url.match(/\/files\/([^/]+)\/view/);
-      if (fileIdMatch && fileIdMatch[1]) {
-        shareUrl = `${window.location.origin}/storage/${fileIdMatch[1]}`;
-      }
-    }
+    const shareUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${url}`
+      : url;
 
     if (navigator.share) {
       try {

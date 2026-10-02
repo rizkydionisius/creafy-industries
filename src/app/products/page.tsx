@@ -2,19 +2,17 @@ import React from 'react';
 import styles from './page.module.css';
 import { Package } from 'lucide-react';
 import Reveal from "@/components/Reveal/Reveal";
-import { createAdminClient, DATABASE_ID } from '@/lib/appwrite-server';
-import { Query } from 'node-appwrite';
+import { prisma } from '@/lib/prisma';
+import { normalizeProduct } from '@/lib/normalize';
 import ProductCatalog from '@/app/ProductCatalog';
 
 export default async function Products() {
-  let products = [];
+  let products: any[] = [];
   try {
-    const { databases } = await createAdminClient();
-    const res = await databases.listDocuments(DATABASE_ID, 'products', [
-      Query.orderAsc('sequence'),
-      Query.orderDesc('$createdAt')
-    ]);
-    products = JSON.parse(JSON.stringify(res.documents));
+    const raw = await prisma.product.findMany({
+      orderBy: [{ sequence: 'asc' }, { created_at: 'desc' }],
+    });
+    products = raw.map(normalizeProduct);
   } catch (error) {
     console.error("Gagal mengambil data produk:", error);
   }

@@ -5,6 +5,8 @@ import { normalizeSizeChart } from '@/lib/normalize';
 import { Ruler } from 'lucide-react';
 import SizeChartGridClient from './SizeChartGridClient';
 
+export const revalidate = 60;
+
 export default async function SizeChartPage() {
   let sizeCharts: any[] = [];
 

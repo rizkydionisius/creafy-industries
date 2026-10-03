@@ -5,6 +5,8 @@ import { normalizePortfolio } from '@/lib/normalize';
 import { Briefcase } from 'lucide-react';
 import PortfolioFilterClient from './PortfolioFilterClient';
 
+export const revalidate = 60;
+
 export default async function PortfolioPage() {
   let portfolios: any[] = [];
 

@@ -9,6 +9,8 @@ export const metadata = {
   description: 'Baca tips seputar konveksi, bahan pakaian, dan tren fashion terbaru dari Creafy Industries.',
 };
 
+export const revalidate = 60;
+
 export default async function ArticlesPage() {
   let articles: any[] = [];
 

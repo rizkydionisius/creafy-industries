@@ -4,8 +4,9 @@ import { CheckCircle, Clock, ShieldCheck, Palette, Calendar, Eye, FileText, Arro
 import { prisma } from '@/lib/prisma';
 import ProductCatalog from "./ProductCatalog";
 import Reveal from "@/components/Reveal/Reveal";
-
 import { normalizeLogo, normalizeProduct, normalizeArticle } from '@/lib/normalize';
+
+export const revalidate = 60; // Refresh data setiap 60 detik
 
 export default async function Home() {
   let logos: any[] = [];

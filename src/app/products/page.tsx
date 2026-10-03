@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma';
 import { normalizeProduct } from '@/lib/normalize';
 import ProductCatalog from '@/app/ProductCatalog';
 
+export const revalidate = 60;
+
 export default async function Products() {
   let products: any[] = [];
   try {
